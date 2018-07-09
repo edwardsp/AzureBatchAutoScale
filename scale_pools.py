@@ -59,7 +59,7 @@ if __name__ == '__main__':
                 
                 # https://docs.microsoft.com/en-us/rest/api/batchservice/task/list
                 all_tasks = {}
-                for task in batch_client.task.list(job_name, batchmodels.TaskListOptions("(state eq 'active') or (state eq 'running')")):
+                for task in batch_client.task.list(job_name):
                     all_tasks[task.id] = task
                 
                 for task_id, task in all_tasks.items():
