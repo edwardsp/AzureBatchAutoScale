@@ -1,6 +1,6 @@
 # Azure Batch Auto Scale
 
-This python script can be used to implement auto scaling for pools when running with Azure Batch.
+This python script uses the Azure Batch Python API to implement auto scaling for pools running MPI tasks.  The auto scaling parameters currently provided by Azure Batch (https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling) do not expose sufficient information on the multi-instance tasks to implement an auto scaling formula for a pool.  Instead this can be used as a work-around for such cases.
 
 Assumptions:
 
