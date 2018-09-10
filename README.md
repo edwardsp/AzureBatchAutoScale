@@ -16,22 +16,22 @@ Assumptions:
                         [-d DELAY] [--debug DEBUG]
 
     optional arguments:
-    -h, --help            show this help message and exit
-    -p POOLS, --pools POOLS
+      -h, --help            show this help message and exit
+      -p POOLS, --pools POOLS
                             comma separated list of pools (all pools if empty)
-    -m MAX_NODES, --max-nodes MAX_NODES
+      -m MAX_NODES, --max-nodes MAX_NODES
                             maximum number of nodes for a pool
-    -l LOOP, --loop LOOP  if non-zero continuously repeating the auto scale
+      -l LOOP, --loop LOOP  if non-zero continuously repeating the auto scale
                             sleeping for this number of seconds
-    -n ACCOUNT_NAME, --account-name ACCOUNT_NAME
+      -n ACCOUNT_NAME, --account-name ACCOUNT_NAME
                             the Batch account name
-    -u ACCOUNT_URL, --account-url ACCOUNT_URL
+      -u ACCOUNT_URL, --account-url ACCOUNT_URL
                             the Batch account URL
-    -k ACCOUNT_KEY, --account-key ACCOUNT_KEY
+      -k ACCOUNT_KEY, --account-key ACCOUNT_KEY
                             the Batch account key
-    -d DELAY, --delay DELAY
+      -d DELAY, --delay DELAY
                             this is delay in minutes before scaling down a pool
-    --debug DEBUG         add debug information, 0=none, 1=queue stats,
+      --debug DEBUG         add debug information, 0=none, 1=queue stats,
                             2=verbose
 
 Ensure your MAX_NODES is not greater than your quota (otherwise if more nodes are requested the pool will not resize and get stuck in a loop returning capacity exceeded)
