@@ -1,6 +1,8 @@
 #!/usr/bin/python
 
 import argparse
+import collections
+import datetime
 import json
 import os
 import time
@@ -8,8 +10,6 @@ import time
 import azure.batch.batch_service_client as batch
 import azure.batch.batch_auth as batchauth
 import azure.batch.models as batchmodels
-
-from collections import namedtuple
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -19,6 +19,8 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--account-name', help='the Batch account name')
     parser.add_argument('-u', '--account-url', help='the Batch account URL')
     parser.add_argument('-k', '--account-key', help='the Batch account key')
+    parser.add_argument('-d', '--delay', help='this is delay in minutes before scaling down a pool', default=0, type=int)
+    parser.add_argument('--debug', help='add debug information, 0=none, 1=queue stats, 2=verbose', default=0, type=int)
     args = parser.parse_args()
 
     BATCH_ACCOUNT_NAME = args.account_name
@@ -27,6 +29,7 @@ if __name__ == '__main__':
     POOL_MAX_NODES = args.max_nodes
     LOOP = args.loop
     POOLS = args.pools
+    DELAY = datetime.timedelta(minutes=args.delay)
 
     print("account name: ", BATCH_ACCOUNT_NAME)
     print("account URL: ", BATCH_ACCOUNT_URL)
@@ -35,13 +38,18 @@ if __name__ == '__main__':
     credentials = batchauth.SharedKeyCredentials(BATCH_ACCOUNT_NAME, BATCH_ACCOUNT_KEY)
     batch_client = batch.BatchServiceClient(credentials, base_url=BATCH_ACCOUNT_URL)
 
-    BatchTask = namedtuple("BatchTask", "pool_name job_name task_name state nodes deps")
+    BatchTask = collections.namedtuple("BatchTask", "pool_name job_name task_name state nodes deps")
+    PoolDemand = collections.namedtuple("PoolDemand", "time size")
 
     # Get pools here
     if POOLS:
         pool_list = POOLS.split(',')
     else:
         pool_list = [ pool.id for pool in batch_client.pool.list() ]
+
+    pool_sizes = {}
+    for pool_name in pool_list:
+        pool_sizes[pool_name] = collections.deque()
 
     while True:
         output = []
@@ -97,7 +105,17 @@ if __name__ == '__main__':
             pool_current_nodes = pool.current_dedicated_nodes
 
             required_nodes = nrunning + nready
+
             new_target = min(POOL_MAX_NODES, required_nodes)
+
+            # keep the historical targets
+            now = datetime.datetime.now()
+            pool_sizes[pool_name].append(PoolDemand(now, new_target))
+            # now clear timings out of range of the delay duration
+            while (now - pool_sizes[pool_name][0].time) > DELAY:
+                pool_sizes[pool_name].popleft()
+            # now adjust the new_target to incorporate the delay
+            new_target = max(new_target, max([ i.size for i in pool_sizes[pool_name] ]))
 
             resized = False
             if new_target != pool_current_nodes and pool.allocation_state == batchmodels.AllocationState.steady:
@@ -117,7 +135,14 @@ if __name__ == '__main__':
                 }
             })
 
-        print(json.dumps(output))
+        if args.debug > 1:
+            for pool_name in pool_list:
+                print(pool_name)
+                for entry in pool_sizes[pool_name]:
+                    print("    ", entry.time, " : ", entry.size)
+
+        if args.debug > 0:
+            print(json.dumps(output))
         if LOOP == 0:
             break
         time.sleep(LOOP)
