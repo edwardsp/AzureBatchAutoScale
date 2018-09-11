@@ -60,7 +60,7 @@ if __name__ == '__main__':
             # get all the active jobs
             # https://docs.microsoft.com/en-us/rest/api/batchservice/job/list
             job_filter_str = "(state eq 'active') and (executionInfo/poolId eq '{}')"
-            for job in batch_client.job.list(batchmodels.JobListOptions(job_filter_str.format(pool_name))):                            
+            for job in batch_client.job.list(batchmodels.JobListOptions(filter=job_filter_str.format(pool_name))):                            
                 job_name = job.id
                 pool_name = job.pool_info.pool_id
                 job_uses_dependencies = job.uses_task_dependencies
