@@ -60,29 +60,33 @@ if __name__ == '__main__':
             # get all the active jobs
             # https://docs.microsoft.com/en-us/rest/api/batchservice/job/list
             job_filter_str = "(state eq 'active') and (executionInfo/poolId eq '{}')"
-            for job in batch_client.job.list(batchmodels.JobListOptions(filter=job_filter_str.format(pool_name))):                            
+            for job in batch_client.job.list(batchmodels.JobListOptions(filter=job_filter_str.format(pool_name))):
                 job_name = job.id
                 pool_name = job.pool_info.pool_id
                 job_uses_dependencies = job.uses_task_dependencies
-                
+
                 # https://docs.microsoft.com/en-us/rest/api/batchservice/task/list
                 all_tasks = {}
                 for task in batch_client.task.list(job_name):
                     all_tasks[task.id] = task
-                
+
                 for task_id, task in all_tasks.items():
                     # check the number of nodes required
                     num_nodes = 1
                     if task.multi_instance_settings:
                         num_nodes = task.multi_instance_settings.number_of_instances
-                    
+
                     # gather dependencies that have not completed
                     deps = []
                     if task.depends_on:
                         for dep in task.depends_on.task_ids:
-                            if all_tasks[dep].state != batchmodels.TaskState.completed:
+                            if all_tasks[dep].state != batchmodels.TaskState.completed or (
+                                hasattr(all_tasks[dep].exit_conditions, "default")
+                                and all_tasks[dep].exit_conditions.default.dependency_action == batchmodels.DependencyAction.block
+                                and all_tasks[dep].execution_info.exit_code != 0
+                            ):
                                 deps.append(dep)
-                        
+
                     # now add to correct list
                     state = "null"
                     if task.state == batchmodels.TaskState.running:
@@ -93,14 +97,14 @@ if __name__ == '__main__':
                         else:
                             state = "ready"
 
-                    # create batch task       
+                    # create batch task
                     if state != "null":
                         task_list.append(BatchTask(pool_name, job_name, task_id, state, num_nodes, deps))
 
             nrunning = sum([t.nodes for t in task_list if t.state == "running" and t.pool_name == pool_name])
             nready = sum([t.nodes for t in task_list if t.state == "ready" and t.pool_name == pool_name])
             nwaiting = sum([t.nodes for t in task_list if t.state == "waiting" and t.pool_name == pool_name])
-            
+
             pool = batch_client.pool.get(pool_name)
             pool_current_nodes = pool.current_dedicated_nodes
 
@@ -120,7 +124,7 @@ if __name__ == '__main__':
             resized = False
             if new_target != pool_current_nodes and pool.allocation_state == batchmodels.AllocationState.steady:
                 resized = True
-                batch_client.pool.resize(pool_name, batchmodels.PoolResizeParameter(target_dedicated_nodes=new_target))
+                #batch_client.pool.resize(pool_name, batchmodels.PoolResizeParameter(target_dedicated_nodes=new_target))
 
             output.append({
                 pool_name: {
