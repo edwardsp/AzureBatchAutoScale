@@ -124,7 +124,7 @@ if __name__ == '__main__':
             resized = False
             if new_target != pool_current_nodes and pool.allocation_state == batchmodels.AllocationState.steady:
                 resized = True
-                #batch_client.pool.resize(pool_name, batchmodels.PoolResizeParameter(target_dedicated_nodes=new_target))
+                batch_client.pool.resize(pool_name, batchmodels.PoolResizeParameter(target_dedicated_nodes=new_target))
 
             output.append({
                 pool_name: {
